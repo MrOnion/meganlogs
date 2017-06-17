@@ -7,3 +7,4 @@ authors = ["Ari Karhu <ari@baboonplanet.com>"]
 toml = "*"
 serde = "*"
 serde_derive = "*"
+serial = "*"
