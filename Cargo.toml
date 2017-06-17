@@ -1,0 +1,9 @@
+[package]
+name = "meganlogs"
+version = "0.1.0"
+authors = ["Ari Karhu <ari@baboonplanet.com>"]
+
+[dependencies]
+toml = "*"
+serde = "*"
+serde_derive = "*"

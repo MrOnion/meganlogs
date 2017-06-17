@@ -1,0 +1,5 @@
+serial_device = "/dev/ttyUSB0"
+log_path = "/data/"
+data_rate = 15
+split = 0
+prefix = "onion"
