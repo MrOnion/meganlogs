@@ -5,6 +5,8 @@ extern crate serde_derive;
 extern crate serial;
 extern crate ncurses;
 
+mod command;
+
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
@@ -50,17 +52,31 @@ fn main() {
     port.configure(&SETTINGS).unwrap();
     port.set_timeout(std::time::Duration::from_secs(3)).unwrap();
 
+    // get signatures from ECU
+    let sig_firmware: String = command::signature_firmware(&mut port).unwrap();
+    let sig_comms: String = command::signature_comms(&mut port).unwrap();
+
+    println!("{:?}", sig_comms);
+
     initscr();
     keypad(stdscr(), true);
     nodelay(stdscr(), true);
     noecho();
+    cbreak();
+    curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
     start_color();
     init_color(COLOR_BACKGROUND, 0, 0, 0);
-    init_color(COLOR_FOREGROUND, 200, 300, 200);
+    init_color(COLOR_FOREGROUND, 100, 300, 200);
     init_pair(COLOR_PAIR_DEFAULT, COLOR_FOREGROUND, COLOR_BACKGROUND);
 
-    bkgd(' ' as chtype | COLOR_PAIR(COLOR_PAIR_DEFAULT) as chtype);
+    box_(stdscr(), 0, 0);
+
+    mvaddstr(1, 1, "*** MeganLogs ***");
+    mvaddstr(3, 1, "Firmware: ");
+    mvaddstr(3, 12, &sig_firmware);
+    mvaddstr(4, 1, "Comms:    ");
+    mvaddstr(4, 12, &sig_comms);
 
     loop {
         match getch() {
