@@ -6,6 +6,7 @@ use self::byteorder::{BigEndian, ReadBytesExt};
 
 const CMD_FIRMWARE: [u8;7] = [0x00, 0x01, 0x53, 0x20, 0x60, 0xEF, 0xC3];
 const CMD_COMMS: [u8;7] = [0x00, 0x01, 0x51, 0xCE, 0x6E, 0x8E, 0xEF];
+const CMD_MONITOR: [u8;7] = [0x00, 0x01, 0x4D, 0xDA, 0x6F, 0xD2, 0xA0];
 const CMD_LOG: [u8;7] = [0x00, 0x01, 0x41, 0xD3, 0xD9, 0x9E, 0x8B];
 
 const FLAG_OK: u8 = 0x00;
@@ -17,9 +18,17 @@ pub fn signature_firmware(port: &mut serial::SystemPort) -> Option<String> {
 
 pub fn signature_comms(port: &mut serial::SystemPort) -> Option<String> {
     return do_command(port, &CMD_COMMS, FLAG_OK).and_then(|mut data| {
-        data.retain(|&a| a >= 32);
+        data.retain(|&a| a >= 32);  // take out non-ascii chars
         String::from_utf8(data).ok()
     });
+}
+
+pub fn monitor_version(port: &mut serial::SystemPort) -> Option<u16> {
+    return do_command(port, &CMD_MONITOR, FLAG_OK).and_then(|data| Cursor::new(data).read_u16::<BigEndian>().ok());
+}
+
+pub fn realtime_data(port: &mut serial::SystemPort) -> Option<Vec<u8>> {
+    return do_command(port, &CMD_LOG, FLAG_REALTIME_DATA);
 }
 
 fn do_command(port: &mut serial::SystemPort, cmd: &[u8], flag: u8) -> Option<Vec<u8>> {
