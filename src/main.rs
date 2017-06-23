@@ -21,6 +21,7 @@ const COLOR_PAIR_ON: i16 = 2;
 
 const KEY_TOGGLE: i32 = 32;
 const KEY_MARKER: i32 = 10;
+const KEY_SESSION: i32 = 115;
 const KEY_QUIT: i32 = 113;
 
 const SETTINGS: serial::PortSettings = serial::PortSettings {
@@ -40,15 +41,43 @@ struct Config {
     prefix: Option<String>
 }
 
-fn change_status(state: bool) {
+// Helpers
+
+mod ui_help {
+    use ncurses::*;
+
+    pub fn clear_row(row: i32, from: i32) {
+        let width = getmaxx(stdscr()) - 1;
+        _clear_row(width, row, from);
+    }
+
+    pub fn clear_rows(rows: &[i32], from: i32) {
+        let width = getmaxx(stdscr()) - 1;
+        for row in rows.iter() {
+            _clear_row(width, row.clone(), from);
+        }
+    }
+
+    fn _clear_row(width: i32, row: i32, from: i32) {
+        for x in from..width {
+            mvaddch(row, x, 32);
+        };
+    }
+}
+
+fn print_timestamp() -> String {
+    return time::strftime("%Y%m%d_%H%M%S", &time::now()).unwrap();
+}
+
+fn update_banner(state: bool) {
     attron(A_BOLD() | COLOR_PAIR(if state {COLOR_PAIR_ON} else {COLOR_PAIR_OFF}));
     let width = getmaxx(stdscr()) - 1;
-    (1..width).fold((), |_, x| {
-        mvaddch(11, x, 32);
-    });
+    ui_help::clear_row(11, 1);
     mvaddstr(11, (width - 3) / 2, (if state {"ON"} else {"OFF"}));
     attr_off(A_BOLD() | COLOR_PAIR(if state {COLOR_PAIR_ON} else {COLOR_PAIR_OFF}));
 }
+
+// Main
 
 #[cfg(unix)]
 fn main() {
@@ -72,7 +101,7 @@ fn main() {
     // initial log row to get row size
     let init_row = command::realtime_data(&mut port).unwrap();
 
-    // Create initial mutable data
+    // Create fixed log header
     let frd_header: Vec<u8> = logfile::create_frd_header(&sig_firmware, init_row.len());
 
     // calculate sleep value in ms
@@ -106,25 +135,37 @@ fn main() {
     mvaddstr(8, 1, "Log file:");
     mvaddstr(9, 1, "Log size:");
 
-    change_status(logging);
-    let mut log_path: String;
-    let mut log_file: Option<File> = None;
+    update_banner(logging);
     let path: &String = &config.log_path.unwrap_or(".".to_string());
     let prefix: &String = &config.prefix.unwrap_or("logfile".to_string());
-    let timestamp: String = time::strftime("%Y%m%d_%H%M%S", &time::now()).unwrap();
+    let mut timestamp: String = print_timestamp();
+    let mut run_id = 1;
+    let mut log_path: String;
+    let mut log_file: Option<File> = None;
 
     loop {
         match getch() {
             KEY_TOGGLE => {
                 logging = !logging;
                 if logging {
-                    log_path = logfile::create_path(path, prefix, &timestamp, 1, 1);
+                    if run_id == 1 {
+                        timestamp = print_timestamp();
+                    }
+                    log_path = logfile::create_path(path, prefix, &timestamp, run_id, 1);
                     log_file = Some(logfile::create_logfile(&log_path, &frd_header).unwrap());
                     mvaddstr(8, 12, &log_path);
                 } else {
                     log_file = None;
+                    run_id += 1;
                 }
-                change_status(logging);
+                update_banner(logging);
+            },
+            KEY_SESSION => {
+                if !logging {
+                    timestamp = print_timestamp();
+                    run_id = 1;
+                    ui_help::clear_rows(&[8, 9], 12);
+                }
             },
             KEY_MARKER => println!("MARKER!"),
             KEY_QUIT => break,
