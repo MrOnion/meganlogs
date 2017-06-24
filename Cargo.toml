@@ -4,10 +4,10 @@ version = "0.1.0"
 authors = ["Ari Karhu <ari@baboonplanet.com>"]
 
 [dependencies]
-toml = "*"
-serde = "*"
-serde_derive = "*"
-serial = "*"
-ncurses = "*"
-byteorder = "*"
-time = "*"
+toml = "0.4.1"
+serde = "1.0.8"
+serde_derive = "1.0.8"
+serial = "0.3.4"
+ncurses = "5.85.0"
+byteorder = "1.0.0"
+time = "0.1.37"
