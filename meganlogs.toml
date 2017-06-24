@@ -1,4 +1,4 @@
 serial_device = "/dev/ttyUSB0"
 log_path = "."
 data_rate = 15
-prefix = "onion"
+prefix = "datalog"

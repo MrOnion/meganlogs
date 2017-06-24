@@ -15,6 +15,8 @@ use std::path::Path;
 use serial::prelude::*;
 use ncurses::*;
 
+const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
+
 const COLOR_PAIR_OFF: i16 = 1;
 const COLOR_PAIR_ON: i16 = 2;
 
@@ -118,7 +120,7 @@ fn main() {
 
     box_(stdscr(), 0, 0);
 
-    mvaddstr(1, 1, "*** MeganLogs ***");
+    mvaddstr(1, 1, &format!("=== MeganLogs v{} ===", VERSION.unwrap_or("0.0.0")));
     mvaddstr(3, 1, "Serial:");
     mvaddstr(3, ROW_PADDING, &device);
     mvaddstr(4, 1, "Firmware:");
