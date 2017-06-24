@@ -28,7 +28,8 @@ const KEY_QUIT: i32 = 113;
 const ROW_PADDING: i32 = 12;
 const ROW_SESSION_ID: i32 = 9;
 const ROW_LOG_SIZE: i32 = 10;
-const ROW_BANNER: i32 = 12;
+const ROW_MARKER: i32 = 11;
+const ROW_BANNER: i32 = 13;
 
 const SETTINGS: serial::PortSettings = serial::PortSettings {
     baud_rate:    serial::Baud115200,
@@ -133,13 +134,14 @@ fn main() {
     mvaddstr(8, ROW_PADDING, &format!("{} rps ({} ms)", &config.data_rate.unwrap_or(15), sleep_value));
     mvaddstr(ROW_SESSION_ID, 1, "Session:");
     mvaddstr(ROW_LOG_SIZE, 1, "Log size:");
+    mvaddstr(ROW_MARKER, 1, "Markers:");
 
     // Beef
 
     let mut logging = false;
     update_banner(logging);
 
-    let mut session_ids: (u16, u16) = (1, 1);
+    let mut session_ids: (u16, u16, u16) = (1, 1, 0);  // session, run, markers
     let m_log: logfile::MLog = logfile::MLog::init(
         &config.log_path.unwrap_or(".".to_string()),
         &config.prefix.unwrap_or("logfile".to_string()),
@@ -147,35 +149,45 @@ fn main() {
         row_size
     );
     let mut log_file: Option<File> = None;
+    let mut marker: bool = false;
 
     loop {
         match getch() {
             KEY_TOGGLE => {
                 logging = !logging;
                 if logging {
-                    log_file = Some(m_log.open(session_ids).unwrap());
+                    log_file = Some(m_log.open((session_ids.0, session_ids.1)).unwrap());
                     mvaddstr(ROW_SESSION_ID, ROW_PADDING, &format!("{} / {}", session_ids.0, session_ids.1));
+                    mvaddstr(ROW_MARKER, ROW_PADDING, &format!("{}", session_ids.2));
                     ui_help::clear_row(ROW_LOG_SIZE, ROW_PADDING);
                 } else {
                     log_file.map(|f| f.sync_all());
                     log_file = None;
-                    session_ids.1 += 1;
+                    session_ids = (session_ids.0, session_ids.1 + 1, 0);
                 }
                 update_banner(logging);
             },
             KEY_SESSION => {
                 if !logging {
-                    session_ids = (session_ids.0 + 1, 1);
-                    ui_help::clear_rows(&[ROW_SESSION_ID, ROW_LOG_SIZE], ROW_PADDING);
+                    session_ids = (session_ids.0 + 1, 1, 0);
+                    ui_help::clear_rows(&[ROW_SESSION_ID, ROW_LOG_SIZE, ROW_MARKER], ROW_PADDING);
                 }
             },
-            KEY_MARKER => println!("MARKER!"),
+            KEY_MARKER => {
+                marker = true;
+            },
             KEY_QUIT => break,
             _ => ()
         }
 
         match log_file.as_mut() {
             Some(active) => {
+                if marker {
+                    active.write(&logfile::MLog::marker()).unwrap();
+                    session_ids.2 += 1;
+                    marker = false;
+                    mvaddstr(ROW_MARKER, ROW_PADDING, &format!("{}", session_ids.2));
+                }
                 active.write(&command::realtime_data(&mut port).unwrap()).unwrap();
                 mvaddstr(ROW_LOG_SIZE, ROW_PADDING, &format!("{} bytes", active.metadata().unwrap().len()));
                 std::thread::sleep(std::time::Duration::from_millis(sleep_value));

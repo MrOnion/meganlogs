@@ -38,20 +38,29 @@ impl MLog {
         }
     }
 
+    pub fn marker() -> Vec<u8> {
+        let mut marker = Vec::with_capacity(5);
+        marker.extend([0x02].iter());
+        let mut ts: Vec<u8> = Vec::with_capacity(4);
+        ts.write_u32::<BigEndian>(time::precise_time_s() as u32).unwrap();
+        marker.extend(ts);
+        return marker;
+    }
+
     fn create_frd_header(&self, timestamp: &time::Tm) -> Vec<u8> {
         let mut header: Vec<u8> = Vec::with_capacity(81);
 
         // FRD file format + version
-        header.extend([0x46, 0x52, 0x44, 0x00, 0x00, 0x00, 0x00, 0x01].iter().cloned());
+        header.extend([0x46, 0x52, 0x44, 0x00, 0x00, 0x00, 0x00, 0x01].iter());
         // Timestamp
         let mut ts: Vec<u8> = Vec::with_capacity(4);
         ts.write_u32::<BigEndian>(timestamp.to_timespec().sec as u32).unwrap();
         header.extend(ts);
         // Signature
         let padded: String = format!("{:63}", self.signature);
-        header.extend(padded.as_bytes().iter().cloned());
+        header.extend(padded.as_bytes().iter());
         // Data index
-        header.extend([0x00, 0x00, 0x00, 0x51].iter().cloned());
+        header.extend([0x00, 0x00, 0x00, 0x51].iter());
         // Row size
         let mut rs: Vec<u8> = Vec::with_capacity(2);
         rs.write_u16::<BigEndian>(self.row_size as u16).unwrap();
