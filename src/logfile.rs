@@ -57,8 +57,12 @@ impl MLog {
         ts.write_u32::<BigEndian>(timestamp.to_timespec().sec as u32).unwrap();
         header.extend(ts);
         // Signature
-        let padded: String = format!("{:63}", self.signature);
-        header.extend(padded.as_bytes().iter());
+        let mut sig: Vec<u8> = Vec::with_capacity(63);
+        sig.extend(self.signature.as_bytes().iter());
+        for _ in 0..63 - self.signature.len() {
+            sig.push(0);
+        }
+        header.extend(sig);
         // Data index
         header.extend([0x00, 0x00, 0x00, 0x51].iter());
         // Row size

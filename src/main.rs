@@ -145,11 +145,12 @@ fn main() {
     let m_log: logfile::MLog = logfile::MLog::init(
         &config.log_path.unwrap_or(".".to_string()),
         &config.prefix.unwrap_or("logfile".to_string()),
-        &sig_firmware,
+        &sig_comms,
         row_size
     );
     let mut log_file: Option<File> = None;
     let mut marker: bool = false;
+    let mut row_counter: u64 = 0;
 
     loop {
         match getch() {
@@ -188,7 +189,11 @@ fn main() {
                     marker = false;
                     mvaddstr(ROW_MARKER, ROW_PADDING, &format!("{}", session_ids.2));
                 }
-                active.write(&command::realtime_data(&mut port).unwrap()).unwrap();
+                let mut entry: Vec<u8> = Vec::with_capacity(row_size + 2);
+                entry.extend([0x01, (row_counter % 256) as u8].iter());
+                entry.extend(&command::realtime_data(&mut port).unwrap());
+                active.write(&entry).unwrap();
+                row_counter += 1;
                 mvaddstr(ROW_LOG_SIZE, ROW_PADDING, &format!("{} bytes", active.metadata().unwrap().len()));
                 std::thread::sleep(std::time::Duration::from_millis(sleep_value));
             },
